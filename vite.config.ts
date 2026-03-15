@@ -10,4 +10,5 @@ export default defineConfig({
     globals: true,
     testTimeout: 15000,
   },
+  base: process.env.NODE_ENV === 'production' ? '/StitchMon/' : '/',
 })
