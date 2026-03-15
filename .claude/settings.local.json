@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find 'c:\\\\Users\\\\jblfi\\\\Worldspaces Local\\\\StitchMon' -type d -name *chat-set* -o -name *fixtures* -o -name *tests* -o -name *goldens*)",
+      "Bash(pnpm test:*)"
+    ]
+  }
+}

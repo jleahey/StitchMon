@@ -67,9 +67,16 @@ async function autoOrder(
   // predecessorVotes[j] = total confidence that some image sits above j
   const predecessorVotes = new Array<number>(n).fill(0);
 
-  // For each detected "i above j" edge, record the confidence in a matrix
+  // For each detected "i above j" edge, record the confidence and overlap in matrices
   // so we can greedily chain later
   const edgeScore: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  // edgeOverlap stores the overlap pixel count for each directed edge.
+  // When choosing the next image in the chain, we prefer the candidate with the
+  // LARGEST overlap (= starts earliest in the scroll, most adjacent to current).
+  // A larger overlap means more shared pixels at the top of the candidate, which
+  // places it higher in absolute scroll position — i.e., it comes immediately after
+  // the current image rather than being a "transitive" distant successor.
+  const edgeOverlap: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
 
   const totalPairs = (n * (n - 1)) / 2;
   let done = 0;
@@ -113,11 +120,13 @@ async function autoOrder(
         const conf = fwd!.confidence;
         predecessorVotes[j] += conf;
         edgeScore[i][j] = conf;
+        edgeOverlap[i][j] = fwd!.overlapPixels;
         overlapsMap.set(`${i},${j}`, fwd!);
       } else {
         const conf = rev!.confidence;
         predecessorVotes[i] += conf;
         edgeScore[j][i] = conf;
+        edgeOverlap[j][i] = rev!.overlapPixels;
         overlapsMap.set(`${j},${i}`, rev!);
       }
       done++;
@@ -135,15 +144,18 @@ async function autoOrder(
 
   while (order.length < n) {
     let bestNext = -1;
-    let bestEdge = -1;
+    let bestOverlap = -1;
     for (let j = 0; j < n; j++) {
       if (used.has(j)) continue;
-      if (edgeScore[current][j] > bestEdge) {
-        bestEdge = edgeScore[current][j];
+      // Prefer the candidate with the LARGEST overlap from current.
+      // Large overlap = candidate starts earliest in the scroll = most adjacent next step.
+      // (A "transitive" edge like 0→2 in a chain 0→1→2 has smaller overlap than 0→1.)
+      if (edgeScore[current][j] > 0 && edgeOverlap[current][j] > bestOverlap) {
+        bestOverlap = edgeOverlap[current][j];
         bestNext = j;
       }
     }
-    if (bestNext === -1 || bestEdge === 0) {
+    if (bestNext === -1) {
       // No confident edge — append remaining in original order
       for (let j = 0; j < n; j++) {
         if (!used.has(j)) { order.push(j); used.add(j); }
