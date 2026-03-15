@@ -1,6 +1,5 @@
 /**
- * Screenshot stitcher — composites multiple images vertically,
- * trimming detected overlap between consecutive pairs.
+ * Screenshot stitcher — auto-orders images and composites with overlap trimming.
  */
 
 import { detectOverlap } from './overlapDetector';
@@ -14,21 +13,16 @@ export interface StitchPairResult {
 }
 
 export interface StitchResult {
-  /** The final stitched image as a data URL (PNG) */
   dataUrl: string;
-  /** Width of the stitched image */
   width: number;
-  /** Height of the stitched image */
   height: number;
-  /** Per-pair results */
   pairs: StitchPairResult[];
+  /** The auto-determined ordering of input files (indices into the original files array) */
+  order: number[];
 }
 
 export type ProgressCallback = (message: string, pairIndex: number, totalPairs: number) => void;
 
-/**
- * Load an image File into an HTMLImageElement.
- */
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -38,121 +32,268 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * Draw an HTMLImageElement onto a new canvas.
- */
 function imageToCanvas(img: HTMLImageElement): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = img.naturalWidth;
   canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext('2d')!;
+  // willReadFrequently avoids the browser perf warning on repeated getImageData calls
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+            ?? canvas.getContext('2d')!;
   ctx.drawImage(img, 0, 0);
   return canvas;
 }
 
 /**
- * Stitch an ordered array of image files into one vertical image.
+ * Auto-order N images into a linear vertical chain.
+ *
+ * For each unordered pair (i,j) we run detectOverlap in BOTH directions
+ * and compare:
+ *   - fwd = detectOverlap(i, j)  → i is above j
+ *   - rev = detectOverlap(j, i)  → j is above i
+ *
+ * The direction with a valid result AND higher confidence wins.
+ * We accumulate a "directed wins" count for each image as predecessor,
+ * then do a simple topological sort (image with fewest predecessors = top).
  */
+async function autoOrder(
+  canvases: HTMLCanvasElement[],
+  onProgress?: ProgressCallback,
+): Promise<{ order: number[]; overlaps: Map<string, OverlapResult> }> {
+  const n = canvases.length;
+  const overlapsMap = new Map<string, OverlapResult>();
+
+  // wins[i] = how many other images i has been determined to sit above
+  // This is computed pairwise without a full matrix.
+  // predecessorVotes[j] = total confidence that some image sits above j
+  const predecessorVotes = new Array<number>(n).fill(0);
+
+  // For each detected "i above j" edge, record the confidence in a matrix
+  // so we can greedily chain later
+  const edgeScore: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+
+  const totalPairs = (n * (n - 1)) / 2;
+  let done = 0;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      onProgress?.(`Ordering: comparing ${done + 1}/${totalPairs}…`, done, totalPairs);
+
+      const fwd = detectOverlap(canvases[i], canvases[j]);
+      const rev = detectOverlap(canvases[j], canvases[i]);
+
+      console.log(
+        `[autoOrder] pair (${i},${j}): fwd=${fwd ? `${fwd.overlapPixels}px conf=${fwd.confidence.toFixed(2)}` : 'null'} ` +
+        `rev=${rev ? `${rev.overlapPixels}px conf=${rev.confidence.toFixed(2)}` : 'null'}`
+      );
+
+      // Both null → no information, skip
+      if (!fwd && !rev) { done++; continue; }
+
+      // Determine winner.
+      // Weight by confidence × sqrt(voteCount) so a direction that got
+      // 27 consistent votes beats one with 4 coincidental matches, even
+      // if the minority had marginally higher per-strip NCC.
+      const fwdScore = fwd ? fwd.confidence * Math.sqrt(fwd._votes ?? 1) : -1;
+      const revScore = rev ? rev.confidence * Math.sqrt(rev._votes ?? 1) : -1;
+
+      let iAboveJ: boolean;
+      if (fwd && !rev) {
+        iAboveJ = true;
+      } else if (!fwd && rev) {
+        iAboveJ = false;
+      } else {
+        iAboveJ = fwdScore >= revScore;
+      }
+
+      if (iAboveJ) {
+        const conf = fwd!.confidence;
+        predecessorVotes[j] += conf;
+        edgeScore[i][j] = conf;
+        overlapsMap.set(`${i},${j}`, fwd!);
+      } else {
+        const conf = rev!.confidence;
+        predecessorVotes[i] += conf;
+        edgeScore[j][i] = conf;
+        overlapsMap.set(`${j},${i}`, rev!);
+      }
+      done++;
+    }
+  }
+
+  console.log('[autoOrder] predecessorVotes:', predecessorVotes);
+
+  // Start from the image with the fewest predecessor votes (= the top image)
+  const used = new Set<number>();
+  const order: number[] = [];
+  let current = predecessorVotes.indexOf(Math.min(...predecessorVotes));
+  order.push(current);
+  used.add(current);
+
+  while (order.length < n) {
+    let bestNext = -1;
+    let bestEdge = -1;
+    for (let j = 0; j < n; j++) {
+      if (used.has(j)) continue;
+      if (edgeScore[current][j] > bestEdge) {
+        bestEdge = edgeScore[current][j];
+        bestNext = j;
+      }
+    }
+    if (bestNext === -1 || bestEdge === 0) {
+      // No confident edge — append remaining in original order
+      for (let j = 0; j < n; j++) {
+        if (!used.has(j)) { order.push(j); used.add(j); }
+      }
+      break;
+    }
+    order.push(bestNext);
+    used.add(bestNext);
+    current = bestNext;
+  }
+
+  console.log('[autoOrder] determined order:', order);
+  return { order, overlaps: overlapsMap };
+}
+
 export async function stitchImages(
   files: File[],
   onProgress?: ProgressCallback,
 ): Promise<StitchResult> {
-  if (files.length === 0) {
-    throw new Error('No images provided');
-  }
+  if (files.length === 0) throw new Error('No images provided');
 
-  // Load all images
-  onProgress?.('Loading images…', 0, files.length - 1);
+  onProgress?.('Loading images…', 0, files.length);
   const images: HTMLImageElement[] = [];
   for (const file of files) {
     images.push(await loadImage(file));
   }
-
-  // Convert to canvases
   const canvases = images.map(imageToCanvas);
 
-  // If only one image, just return it directly
   if (canvases.length === 1) {
+    URL.revokeObjectURL(images[0].src);
     return {
       dataUrl: canvases[0].toDataURL('image/png'),
       width: canvases[0].width,
       height: canvases[0].height,
       pairs: [],
+      order: [0],
     };
   }
 
-  // Detect overlaps between consecutive pairs
-  const pairs: StitchPairResult[] = [];
-  const overlaps: (OverlapResult | null)[] = [];
+  // Auto-order — pure canvas, no OpenCV needed
+  let order: number[];
+  let overlapCache: Map<string, OverlapResult>;
 
-  for (let i = 0; i < canvases.length - 1; i++) {
-    onProgress?.(`Detecting overlap ${i + 1}/${canvases.length - 1}…`, i, canvases.length - 1);
+  if (files.length <= 8) {
+    // Full pairwise search for small sets
+    const result = await autoOrder(canvases, onProgress);
+    order = result.order;
+    overlapCache = result.overlaps;
+  } else {
+    // Too many images — keep upload order, do sequential detection
+    order = canvases.map((_, i) => i);
+    overlapCache = new Map();
+  }
 
-    // Try multiple strip heights for robustness
-    let best: OverlapResult | null = null;
-    for (const stripH of [150, 100, 200, 80, 250]) {
-      const result = detectOverlap(canvases[i], canvases[i + 1], stripH, 0.5);
-      if (result && (!best || result.confidence > best.confidence)) {
-        best = result;
-      }
+  // Re-order canvases according to the determined order
+  const orderedCanvases = order.map(i => canvases[i]);
+
+  // Detect overlaps for consecutive ordered pairs
+  // (re-use cache hits from the auto-order phase)
+  const pairResults: StitchPairResult[] = [];
+  const overlapList: (OverlapResult | null)[] = [];
+
+  for (let i = 0; i < orderedCanvases.length - 1; i++) {
+    onProgress?.(`Refining overlap ${i + 1}/${orderedCanvases.length - 1}…`, i, orderedCanvases.length - 1);
+    const keyFwd = `${order[i]},${order[i + 1]}`;
+
+    let best: OverlapResult | null = overlapCache.get(keyFwd) ?? null;
+
+    if (!best) {
+      best = detectOverlap(orderedCanvases[i], orderedCanvases[i + 1]) ?? null;
     }
 
-    overlaps.push(best);
-    pairs.push({
-      indexA: i,
-      indexB: i + 1,
+    overlapList.push(best);
+    pairResults.push({
+      indexA: order[i],
+      indexB: order[i + 1],
       overlap: best,
       fallback: best === null,
     });
   }
 
-  // Calculate final dimensions
-  const width = Math.max(...canvases.map(c => c.width));
-  let totalHeight = canvases[0].height;
-  for (let i = 1; i < canvases.length; i++) {
-    const overlap = overlaps[i - 1];
-    const trimTop = overlap ? Math.min(overlap.overlapPixels, canvases[i].height - 1) : 0;
-    totalHeight += canvases[i].height - trimTop;
+  // ── Footer-aware compositing (generalised for N images) ──────────────────
+  //
+  // For each image[i] that has a successor:
+  //   1. Draw image[i] from startRow[i] to footerCut[i]  (strip the footer)
+  //   2. Compute startRow[i+1] = overlap(i→i+1) − footerH[i]
+  //      If startRow[i+1] ≤ 0 → no footer adjustment possible, use 0.
+  //
+  // The last image is drawn from startRow[last] to its bottom.
+  //
+  // FORMULA:
+  //   overlap = hA − rowA + bestRowB
+  //   If A is cut at footerCut = hA × 0.88, footerH = hA × 0.12
+  //   Then startB that picks up RIGHT where A's cut ends:
+  //     startB = overlap − footerH
+  //   because: A[footerCut] == B[startB]  ↔  startB = overlap − footerH
+
+  const FOOTER_FRAC = 0.88;
+
+  // Pass 1: compute startRow for each image
+  const startRow = new Array<number>(orderedCanvases.length).fill(0);
+  for (let i = 0; i < orderedCanvases.length - 1; i++) {
+    const ov = overlapList[i];
+    if (!ov) { startRow[i + 1] = 0; continue; }
+    const footerH = Math.floor(orderedCanvases[i].height * (1 - FOOTER_FRAC));
+    const next    = ov.overlapPixels - footerH;
+    startRow[i + 1] = next > 0 ? next : 0;
   }
 
-  // Composite onto final canvas
-  onProgress?.('Compositing final image…', canvases.length - 1, canvases.length - 1);
+  // Pass 2: compute total height
+  const width = Math.max(...orderedCanvases.map(c => c.width));
+  let totalHeight = 0;
+  for (let i = 0; i < orderedCanvases.length; i++) {
+    const isLast = i === orderedCanvases.length - 1;
+    const drawTo = (!isLast && overlapList[i])
+      ? Math.floor(orderedCanvases[i].height * FOOTER_FRAC)
+      : orderedCanvases[i].height;
+    totalHeight += drawTo - startRow[i];
+  }
 
+  // Composite
+  onProgress?.('Compositing…', orderedCanvases.length - 1, orderedCanvases.length - 1);
   const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = width;
+  finalCanvas.width  = width;
   finalCanvas.height = totalHeight;
   const ctx = finalCanvas.getContext('2d')!;
-
-  // Fill background (for images narrower than the widest)
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, totalHeight);
 
-  // Draw first image (full, including its header)
   let y = 0;
-  ctx.drawImage(canvases[0], 0, y);
-  y += canvases[0].height;
-
-  // Draw subsequent images, trimming overlap from the top
-  for (let i = 1; i < canvases.length; i++) {
-    const overlap = overlaps[i - 1];
-    const trimTop = overlap ? Math.min(overlap.overlapPixels, canvases[i].height - 1) : 0;
-
-    const srcX = 0;
-    const srcY = trimTop;
-    const srcW = canvases[i].width;
-    const srcH = canvases[i].height - trimTop;
-
-    ctx.drawImage(canvases[i], srcX, srcY, srcW, srcH, 0, y, srcW, srcH);
-    y += srcH;
+  for (let i = 0; i < orderedCanvases.length; i++) {
+    const isLast = i === orderedCanvases.length - 1;
+    const from   = startRow[i];
+    const to     = (!isLast && overlapList[i])
+      ? Math.floor(orderedCanvases[i].height * FOOTER_FRAC)
+      : orderedCanvases[i].height;
+    const srcH = to - from;
+    if (srcH > 0) {
+      ctx.drawImage(
+        orderedCanvases[i],
+        0, from, orderedCanvases[i].width, srcH,
+        0, y,    orderedCanvases[i].width, srcH,
+      );
+      y += srcH;
+    }
   }
 
-  // Clean up object URLs
   images.forEach(img => URL.revokeObjectURL(img.src));
 
   return {
     dataUrl: finalCanvas.toDataURL('image/png'),
     width: finalCanvas.width,
     height: finalCanvas.height,
-    pairs,
+    pairs: pairResults,
+    order,
   };
 }
