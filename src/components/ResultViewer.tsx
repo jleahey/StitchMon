@@ -12,9 +12,31 @@ export function ResultViewer({ result, onFullscreen, onReset, onAddMore }: Resul
   const inputRef = useRef<HTMLInputElement>(null);
   const [addDragOver, setAddDragOver] = useState(false);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    const filename = 'stitched.png';
+
+    // Try Web Share API first (better for mobile/iOS camera roll)
+    if (navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(result.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: 'image/png' });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Stitched Image',
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Share failed:', err);
+      }
+    }
+
+    // Fallback to traditional download
     const a = document.createElement('a');
-    a.download = 'stitched.png';
+    a.download = filename;
     a.href = result.dataUrl;
     a.click();
   };
