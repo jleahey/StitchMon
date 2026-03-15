@@ -70,12 +70,13 @@ function ncc(a: Float32Array, b: Float32Array): number {
   return denom < 1e-6 ? 0 : ab / denom;
 }
 
-export function detectOverlap(
+export async function detectOverlap(
   canvasA: HTMLCanvasElement,
   canvasB: HTMLCanvasElement,
   nccThreshold = 0.85,
   minVotes = 4,
-): OverlapResult | null {
+  onSubProgress?: (done: number, total: number) => void,
+): Promise<OverlapResult | null> {
   if (canvasA.width !== canvasB.width) return null;
 
   const w  = canvasA.width;
@@ -99,36 +100,52 @@ export function detectOverlap(
   // Search in B's top 65%
   const searchEndB = Math.floor(hB * 0.65) - STRIP_H;
 
+  // Pre-compute signatures for B to save time in the inner loop
+  const sigsB: { row: number; sig: Float32Array }[] = [];
+  for (let rowB = 0; rowB <= searchEndB; rowB += 2) {
+    const s = stripSignature(imgB.data, w, rowB, STRIP_H);
+    if (s) sigsB.push({ row: rowB, sig: s });
+  }
+
   const minOverlap = Math.floor(Math.min(hA, hB) * 0.05);
   const maxOverlap = Math.floor(Math.min(hA, hB) * 0.90);
 
   const BIN = 6;
   const voteMap = new Map<number, { total: number; count: number }>();
 
+  let probesDone = 0;
   for (let rowA = scanStartA; rowA < scanEndA; rowA += stepA) {
     const sigA = stripSignature(imgA.data, w, rowA, STRIP_H);
-    if (!sigA) continue; // flat strip, skip
+    if (!sigA) continue; 
 
     let bestNCC  = nccThreshold;
     let bestRowB = -1;
 
-    for (let rowB = 0; rowB <= searchEndB; rowB += 2) { // step by 2 for speed
-      const sigB = stripSignature(imgB.data, w, rowB, STRIP_H);
-      if (!sigB) continue;
-      const score = ncc(sigA, sigB);
-      if (score > bestNCC) { bestNCC = score; bestRowB = rowB; }
+    for (const b of sigsB) {
+      const score = ncc(sigA, b.sig);
+      if (score > bestNCC) {
+        bestNCC = score;
+        bestRowB = b.row;
+      }
     }
 
-    if (bestRowB === -1) continue;
+    if (bestRowB !== -1) {
+      const overlap = hA - rowA + bestRowB;
+      if (overlap >= minOverlap && overlap <= maxOverlap) {
+        const bin = Math.round(overlap / BIN) * BIN;
+        const entry = voteMap.get(bin) ?? { total: 0, count: 0 };
+        entry.total += bestNCC;
+        entry.count += 1;
+        voteMap.set(bin, entry);
+      }
+    }
 
-    const overlap = hA - rowA + bestRowB;
-    if (overlap < minOverlap || overlap > maxOverlap) continue;
-
-    const bin = Math.round(overlap / BIN) * BIN;
-    const entry = voteMap.get(bin) ?? { total: 0, count: 0 };
-    entry.total += bestNCC;
-    entry.count += 1;
-    voteMap.set(bin, entry);
+    // Yield frequently to keep UI animations smooth
+    probesDone++;
+    onSubProgress?.(probesDone, PROBES);
+    if (probesDone % 5 === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
   }
 
   if (voteMap.size === 0) return null;

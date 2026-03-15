@@ -57,7 +57,7 @@ function imageToCanvas(img: HTMLImageElement): HTMLCanvasElement {
  */
 async function autoOrder(
   canvases: HTMLCanvasElement[],
-  onProgress?: ProgressCallback,
+  onProgress?: (msg: string, doneProbes: number) => void,
 ): Promise<{ order: number[]; overlaps: Map<string, OverlapResult> }> {
   const n = canvases.length;
   const overlapsMap = new Map<string, OverlapResult>();
@@ -76,10 +76,14 @@ async function autoOrder(
 
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      onProgress?.(`Ordering: comparing ${done + 1}/${totalPairs}…`, done, totalPairs);
-
-      const fwd = detectOverlap(canvases[i], canvases[j]);
-      const rev = detectOverlap(canvases[j], canvases[i]);
+      const msg = `Ordering: comparing ${done + 1}/${totalPairs}…`;
+      
+      const fwd = await detectOverlap(canvases[i], canvases[j], 0.85, 4, (subDone) => {
+        onProgress?.(msg, done * 160 + subDone);
+      });
+      const rev = await detectOverlap(canvases[j], canvases[i], 0.85, 4, (subDone) => {
+        onProgress?.(msg, done * 160 + 80 + subDone);
+      });
 
       console.log(
         `[autoOrder] pair (${i},${j}): fwd=${fwd ? `${fwd.overlapPixels}px conf=${fwd.confidence.toFixed(2)}` : 'null'} ` +
@@ -183,9 +187,23 @@ export async function stitchImages(
   let order: number[];
   let overlapCache: Map<string, OverlapResult>;
 
+  // Cumulative progress tracking
+  const n = canvases.length;
+  const orderingPairs = (n * (n - 1)) / 2;
+  const refinementPairs = n - 1;
+  const PROBES_PER_DETECTION = 80;
+  // autoOrder does 2 detections per pair (fwd/rev)
+  const orderingProbes = orderingPairs * 2 * PROBES_PER_DETECTION;
+  const refinementProbes = refinementPairs * PROBES_PER_DETECTION;
+  const totalWeight = orderingProbes + refinementProbes + 1; // +1 for compositing
+
   if (files.length <= 8) {
     // Full pairwise search for small sets
-    const result = await autoOrder(canvases, onProgress);
+    const result = await autoOrder(canvases, (msg, doneProbes) => {
+      // cur is [0...total-1]
+      // We want to map it into [0...orderingPairs]
+      onProgress?.(msg, doneProbes, totalWeight);
+    });
     order = result.order;
     overlapCache = result.overlaps;
   } else {
@@ -203,13 +221,18 @@ export async function stitchImages(
   const overlapList: (OverlapResult | null)[] = [];
 
   for (let i = 0; i < orderedCanvases.length - 1; i++) {
-    onProgress?.(`Refining overlap ${i + 1}/${orderedCanvases.length - 1}…`, i, orderedCanvases.length - 1);
+    const msg = `Refining overlap ${i + 1}/${orderedCanvases.length - 1}…`;
     const keyFwd = `${order[i]},${order[i + 1]}`;
-
+ 
     let best: OverlapResult | null = overlapCache.get(keyFwd) ?? null;
-
+ 
     if (!best) {
-      best = detectOverlap(orderedCanvases[i], orderedCanvases[i + 1]) ?? null;
+      best = await detectOverlap(orderedCanvases[i], orderedCanvases[i + 1], 0.85, 4, (subDone) => {
+        onProgress?.(msg, orderingProbes + (i * PROBES_PER_DETECTION) + subDone, totalWeight);
+      }) ?? null;
+    } else {
+      // Immediate progress jump for cache hits
+      onProgress?.(msg, orderingProbes + (i + 1) * PROBES_PER_DETECTION, totalWeight);
     }
 
     overlapList.push(best);
@@ -261,7 +284,7 @@ export async function stitchImages(
   }
 
   // Composite
-  onProgress?.('Compositing…', orderedCanvases.length - 1, orderedCanvases.length - 1);
+  onProgress?.('Compositing…', orderingProbes + refinementProbes + 1, totalWeight);
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width  = width;
   finalCanvas.height = totalHeight;

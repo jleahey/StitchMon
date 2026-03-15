@@ -59,27 +59,37 @@ body {
   position: relative;
 }
 
-/* Floating badge — very minimal chrome */
+/* Floating badge */
 .app-badge {
   position: fixed;
-  top: 20px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
-  background: rgba(12,12,18,0.8);
+  gap: 10px;
+  padding: 7px 16px 7px 10px;
+  background: rgba(12,12,18,0.85);
   backdrop-filter: blur(16px);
   border: 1px solid var(--border);
   border-radius: 100px;
   user-select: none;
   pointer-events: none;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+}
+
+.app-badge-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: cover;
 }
 
 .app-badge-logo {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--accent), var(--cyan));
@@ -100,10 +110,11 @@ body {
 .app-badge-count {
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 3px 9px;
   border-radius: 100px;
   background: var(--surface-hover);
   color: var(--text-dim);
+  flex-shrink: 0;
 }
 
 /* ── Stage — the main canvas area ──────────── */
@@ -394,6 +405,32 @@ body {
 .progress-status {
   font-size: 0.82rem;
   color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #00f2fe, #8b5cf6);
+  border-radius: 100px;
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
+}
+
+.progress-pct {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Add-more strip ─────────────────────────── */
