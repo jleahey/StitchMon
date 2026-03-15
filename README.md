@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# 🖼️ StitchMon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![Use the app](https://img.shields.io/badge/Live-App-brightgreen)](https://jleahey.github.io/StitchMon/)
 
-Currently, two official plugins are available:
+**StitchMon** is an automated screenshot stitcher designed for creating long vertical images from multiple overlapping screenshots (like chat histories, articles, or spreadsheets). It uses intelligent computer vision techniques to auto-order and seamlessly composite your images locally in your browser.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![StitchMon Preview](public/icon.png)
 
-## React Compiler
+## 🚀 Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+-   **Automated Image Ordering**: Simply drop a batch of screenshots; StitchMon detects their relationships and arranges them in the correct vertical sequence.
+-   **Robust Overlap Detection**: Uses multi-row strip voting with Normalized Cross-Correlation (NCC) to find precise overlap points, even with noisy or repetitive backgrounds.
+-   **Footer-Aware Compositing**: Automatically handles common mobile UI elements like status bars and footers to ensure smooth, gapless transitions.
+-   **Instant Preview**: Interactive results viewer with a fullscreen lightbox for detailed inspection.
+-   **Privacy First**: All processing happens locally in your browser. Your images never leave your machine.
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+-   **Frontend**: React 19, TypeScript
+-   **Build Tool**: Vite 8
+-   **Styling**: Vanilla CSS (Modern, Dark-themed UI)
+-   **Algorithms**: Custom browser-side computer vision (NCC-based strip matching)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📦 Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   [Node.js](https://nodejs.org/) (Latest LTS recommended)
+-   [pnpm](https://pnpm.io/) (Recommended) or npm
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Installation
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/jleahey/StitchMon.git
+    cd StitchMon
+    ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2.  Install dependencies:
+    ```bash
+    pnpm install
+    ```
+
+3.  Start the development server:
+    ```bash
+    pnpm dev
+    ```
+
+4.  Open your browser to `http://localhost:5173`.
+
+## 📂 Project Structure
+
+-   `src/components/`: React UI components (DropZone, ResultViewer, etc.)
+-   `src/stitcher/`: Core logic for image processing.
+    -   `stitcher.ts`: The main orchestration logic for ordering and compositing.
+    -   `overlapDetector.ts`: Implementation of the NCC strip-voting algorithm.
+-   `src/index.css`: Global styles and design system tokens.
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
