@@ -1,5 +1,5 @@
 /* ============================================
-   StitchMon — Image-Centric Design System
+   StitchMon - Image-Centric Design System
    ============================================ */
 
 :root {
@@ -31,7 +31,7 @@
   --norm: 240ms var(--ease);
   --slow: 380ms var(--ease);
 
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --shadow: 0 8px 40px rgba(0,0,0,0.5);
 }
 
@@ -117,7 +117,7 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Stage — the main canvas area ──────────── */
+/* ── Stage - the main canvas area ──────────── */
 .app-stage {
   flex: 1;
   display: flex;
@@ -134,10 +134,39 @@ body {
   padding: 80px 32px 40px;
 }
 
+.landing-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
 .stage-result {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+/* ── Landing hero ───────────────────────────── */
+.landing-hero {
+  text-align: center;
+}
+
+.landing-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.landing-desc {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 /* ── DropZone ───────────────────────────────── */
@@ -286,7 +315,7 @@ body {
   color: var(--text-dim);
 }
 
-/* The result image area — fills remaining vh */
+/* The result image area - fills remaining vh */
 .result-canvas-wrapper {
   flex: 1;
   overflow: auto;
@@ -294,7 +323,6 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding: 24px;
-  cursor: zoom-in;
 }
 
 .result-canvas-wrapper img {
@@ -309,58 +337,8 @@ body {
   box-shadow: 0 8px 60px rgba(0,0,0,0.7);
 }
 
-/* ── Lightbox ───────────────────────────────── */
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  background: rgba(0,0,0,0.92);
-  backdrop-filter: blur(20px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  overflow: auto;
-  cursor: zoom-out;
-  animation: fadeIn 0.2s var(--ease);
-  padding: 48px 24px 24px;
-}
-
-.lightbox-close {
-  position: fixed;
-  top: 16px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  color: var(--text);
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--fast);
-  z-index: 501;
-}
-.lightbox-close:hover {
-  background: rgba(255,255,255,0.16);
-  transform: scale(1.1);
-}
-
-.lightbox-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  border-radius: var(--r-md);
-  cursor: default;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.8);
-  animation: fadeUp 0.25s var(--ease) both;
-}
-
 /* ── Progress overlay ───────────────────────── */
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 .progress-overlay {
   position: fixed;
   inset: 0;
@@ -471,9 +449,34 @@ body {
 
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 600px) {
-  .stage-empty { padding: 72px 16px 20px; }
-  .result-toolbar { padding: 14px 16px; padding-top: 72px; }
-  .result-canvas-wrapper { padding: 12px; }
-  .progress-card { padding: 32px 28px; }
-  .lightbox { padding: 56px 8px 8px; }
+  .stage-empty { padding: 68px 16px 24px; }
+  .landing-stack { gap: 10px; }
+
+  .landing-title { font-size: 1.3rem; }
+  .landing-desc  { font-size: 0.83rem; }
+
+  .dropzone { padding: 48px 24px; border-radius: var(--r-lg); }
+  .dropzone-icon { font-size: 2.8rem; }
+  .dropzone-title { font-size: 1.05rem; }
+
+  .result-toolbar {
+    padding: 12px 14px;
+    padding-top: 68px;
+    gap: 10px;
+  }
+  .result-meta { gap: 7px; }
+  .result-dims  { font-size: 0.75rem; }
+  .result-tag   { font-size: 0.68rem; padding: 2px 8px; }
+
+  .result-actions { gap: 6px; }
+  .btn-action {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    border-radius: var(--r-sm);
+  }
+
+  .result-canvas-wrapper { padding: 10px; }
+  .add-more-strip { padding: 14px 16px; }
+
+  .progress-card { padding: 32px 24px; }
 }

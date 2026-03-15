@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- App icon background -->
+  <rect width="32" height="32" rx="7" fill="#0c0c12"/>
+
+  <!-- Top screenshot panel -->
+  <rect x="6" y="4" width="20" height="10" rx="2" fill="#1a1a28" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <line x1="9" y1="7.5"  x2="23" y2="7.5"  stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="9" y1="10.5" x2="18" y2="10.5" stroke="rgba(255,255,255,0.2)"  stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Stitch seam -->
+  <line x1="6" y1="16" x2="26" y2="16" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3 2" stroke-linecap="round"/>
+
+  <!-- Bottom screenshot panel -->
+  <rect x="6" y="18" width="20" height="10" rx="2" fill="#1a1a28" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <line x1="9" y1="21" x2="23" y2="21" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="9" y1="24" x2="20" y2="24" stroke="rgba(255,255,255,0.2)"  stroke-width="1" stroke-linecap="round"/>
+</svg>

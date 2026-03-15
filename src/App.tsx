@@ -12,7 +12,6 @@ export default function App() {
   const [progressCur, setProgressCur] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
   const [result, setResult] = useState<StitchResult | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
   const running = useRef(false);
 
   const runStitch = useCallback(async (allFiles: File[]) => {
@@ -58,9 +57,9 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Floating badge — icon + name + count */}
+      {/* Floating badge: icon + name + count */}
       <div className="app-badge">
-        <img className="app-badge-icon" src="icon.png" alt="" aria-hidden="true" />
+        <img className="app-badge-icon" src="icon.svg" alt="" aria-hidden="true" />
         <span className="app-badge-logo">StitchMon</span>
         {files.length > 0 && !stitching && (
           <span className="app-badge-count">{files.length} img{files.length !== 1 ? 's' : ''}</span>
@@ -70,7 +69,15 @@ export default function App() {
       <main className="app-stage">
         {!result && !stitching && files.length === 0 && (
           <div className="stage-empty">
-            <DropZone onFiles={handleFiles} />
+            <div className="landing-stack">
+              <div className="landing-hero">
+                <div className="landing-title">Stitch your screenshots into one</div>
+                <p className="landing-desc">
+                  Drop overlapping screenshots. StitchMon auto-orders and seamlessly joins them, right in your browser. Nothing is uploaded anywhere.
+                </p>
+              </div>
+              <DropZone onFiles={handleFiles} />
+            </div>
           </div>
         )}
 
@@ -78,7 +85,6 @@ export default function App() {
           <div className="stage-result">
             <ResultViewer
               result={result}
-              onFullscreen={() => setFullscreen(true)}
               onReset={handleReset}
               onAddMore={handleFiles}
             />
@@ -92,26 +98,6 @@ export default function App() {
           current={progressCur}
           total={progressTotal}
         />
-      )}
-
-      {fullscreen && result && (
-        <div
-          className="lightbox"
-          onClick={() => setFullscreen(false)}
-          id="lightbox"
-        >
-          <button
-            className="lightbox-close"
-            onClick={() => setFullscreen(false)}
-            aria-label="Close"
-          >✕</button>
-          <img
-            className="lightbox-img"
-            src={result.dataUrl}
-            alt="Stitched screenshot fullscreen"
-            onClick={e => e.stopPropagation()}
-          />
-        </div>
       )}
     </div>
   );

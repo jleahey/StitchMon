@@ -3,12 +3,11 @@ import type { StitchResult } from '../stitcher/stitcher';
 
 interface ResultViewerProps {
   result: StitchResult;
-  onFullscreen: () => void;
   onReset: () => void;
   onAddMore: (files: File[]) => void;
 }
 
-export function ResultViewer({ result, onFullscreen, onReset, onAddMore }: ResultViewerProps) {
+export function ResultViewer({ result, onReset, onAddMore }: ResultViewerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [addDragOver, setAddDragOver] = useState(false);
 
@@ -78,9 +77,6 @@ export function ResultViewer({ result, onFullscreen, onReset, onAddMore }: Resul
           <button className="btn-action secondary" onClick={onReset} title="Clear and start over">
             ↺ New
           </button>
-          <button className="btn-action" onClick={onFullscreen} title="Fullscreen preview" id="fullscreen-btn">
-            ⛶ Preview
-          </button>
           <button className="btn-action primary" onClick={handleDownload} id="download-btn">
             ⬇ Download
           </button>
@@ -92,8 +88,6 @@ export function ResultViewer({ result, onFullscreen, onReset, onAddMore }: Resul
         <img
           src={result.dataUrl}
           alt="Stitched screenshot"
-          onClick={onFullscreen}
-          title="Click to preview fullscreen"
         />
       </div>
 

@@ -4,14 +4,11 @@
 
 **StitchMon** is an automated screenshot stitcher designed for creating long vertical images from multiple overlapping screenshots (like chat histories, articles, or spreadsheets). It uses intelligent computer vision techniques to auto-order and seamlessly composite your images locally in your browser.
 
-![StitchMon Preview](public/icon.png)
-
 ## 🚀 Key Features
 
 -   **Automated Image Ordering**: Simply drop a batch of screenshots; StitchMon detects their relationships and arranges them in the correct vertical sequence.
 -   **Robust Overlap Detection**: Uses multi-row strip voting with Normalized Cross-Correlation (NCC) to find precise overlap points, even with noisy or repetitive backgrounds.
 -   **Footer-Aware Compositing**: Automatically handles common mobile UI elements like status bars and footers to ensure smooth, gapless transitions.
--   **Instant Preview**: Interactive results viewer with a fullscreen lightbox for detailed inspection.
 -   **Privacy First**: All processing happens locally in your browser. Your images never leave your machine.
 
 ## 🛠️ Tech Stack
