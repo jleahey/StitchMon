@@ -143,7 +143,8 @@ export async function detectOverlap(
     // Yield frequently to keep UI animations smooth
     probesDone++;
     onSubProgress?.(probesDone, PROBES);
-    if (probesDone % 5 === 0) {
+    const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+    if (!isTest && probesDone % 5 === 0) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
