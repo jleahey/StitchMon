@@ -85,12 +85,18 @@ async function autoOrder(
     for (let j = i + 1; j < n; j++) {
       const msg = `Ordering: comparing ${done + 1}/${totalPairs}…`;
       
-      const fwd = await detectOverlap(canvases[i], canvases[j], 0.85, 4, (subDone) => {
+      // Pass 1: strict — works well for plain/uniform backgrounds.
+      // Pass 2: lenient fallback for images where background photo or
+      //   glassmorphism lowers per-strip NCC below the strict threshold
+      //   (e.g. iMessage with a custom wallpaper).  The fallback only fires
+      //   when the strict pass returns null, so it never affects test cases
+      //   that already pass cleanly.
+      const fwd = (await detectOverlap(canvases[i], canvases[j], 0.85, 4, (subDone) => {
         onProgress?.(msg, done * 160 + subDone);
-      });
-      const rev = await detectOverlap(canvases[j], canvases[i], 0.85, 4, (subDone) => {
+      })) ?? await detectOverlap(canvases[i], canvases[j], 0.75, 3);
+      const rev = (await detectOverlap(canvases[j], canvases[i], 0.85, 4, (subDone) => {
         onProgress?.(msg, done * 160 + 80 + subDone);
-      });
+      })) ?? await detectOverlap(canvases[j], canvases[i], 0.75, 3);
 
       console.log(
         `[autoOrder] pair (${i},${j}): fwd=${fwd ? `${fwd.overlapPixels}px conf=${fwd.confidence.toFixed(2)}` : 'null'} ` +
@@ -239,9 +245,9 @@ export async function stitchImages(
     let best: OverlapResult | null = overlapCache.get(keyFwd) ?? null;
  
     if (!best) {
-      best = await detectOverlap(orderedCanvases[i], orderedCanvases[i + 1], 0.85, 4, (subDone) => {
+      best = (await detectOverlap(orderedCanvases[i], orderedCanvases[i + 1], 0.85, 4, (subDone) => {
         onProgress?.(msg, orderingProbes + (i * PROBES_PER_DETECTION) + subDone, totalWeight);
-      }) ?? null;
+      })) ?? await detectOverlap(orderedCanvases[i], orderedCanvases[i + 1], 0.75, 3) ?? null;
     } else {
       // Immediate progress jump for cache hits
       onProgress?.(msg, orderingProbes + (i + 1) * PROBES_PER_DETECTION, totalWeight);
