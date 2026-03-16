@@ -1,58 +1,64 @@
 # 🖼️ StitchMon
 
-[![Use the app](https://img.shields.io/badge/Live-App-brightgreen)](https://jleahey.github.io/StitchMon/)
+<div align="center">
 
-**StitchMon** is an automated screenshot stitcher designed for creating long vertical images from multiple overlapping screenshots (like chat histories, articles, or spreadsheets). It uses intelligent computer vision techniques to auto-order and seamlessly composite your images locally in your browser.
+**The simplest way to stitch your screenshots into a single, seamless image.**
 
-## 🚀 Key Features
+### 🚀 Stop Fiddling, Start Stitching
+Ditch the manual cropping. **StitchMon** uses smart pattern matching to automatically align and merge your screenshots. Perfect for chat logs, articles, and long vertical captures.
 
--   **Automated Image Ordering**: Simply drop a batch of screenshots; StitchMon detects their relationships and arranges them in the correct vertical sequence.
--   **Robust Overlap Detection**: Uses multi-row strip voting with Normalized Cross-Correlation (NCC) to find precise overlap points, even with noisy or repetitive backgrounds.
--   **Footer-Aware Compositing**: Automatically handles common mobile UI elements like status bars and footers to ensure smooth, gapless transitions.
--   **Privacy First**: All processing happens locally in your browser. Your images never leave your machine.
+[**Open the Live App ➜**](https://jleahey.github.io/StitchMon/)
 
-## 🛠️ Tech Stack
+</div>
 
--   **Frontend**: React 19, TypeScript
--   **Build Tool**: Vite 8
--   **Styling**: Vanilla CSS (Modern, Dark-themed UI)
--   **Algorithms**: Custom browser-side computer vision (NCC-based strip matching)
+---
 
-## 📦 Getting Started
+## ✨ Why StitchMon?
+
+-   **🤖 Simple Auto-Ordering**: Drop your images in any order; we'll figure out the vertical sequence for you.
+-   **🎯 Clean Overlap Detection**: Our matching algorithm finds the precise join points for a seamless look.
+-   **📱 Mobile-Friendly**: Automatically handles common status bars and footers for a gapless result.
+-   **🔒 100% Private**: Your images never leave your browser. All processing happens locally on your device.
+
+## 📦 Getting Started (For the Pros)
+
+To run StitchMon locally or contribute to the project:
 
 ### Prerequisites
 
--   [Node.js](https://nodejs.org/) (Latest LTS recommended)
--   [pnpm](https://pnpm.io/) (Recommended) or npm
+-   [Node.js](https://nodejs.org/) (Latest LTS)
+-   [pnpm](https://pnpm.io/) (Recommended)
 
 ### Installation
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/jleahey/StitchMon.git
-    cd StitchMon
-    ```
+```bash
+# 1. Clone the repository
+git clone https://github.com/jleahey/StitchMon.git
+cd StitchMon
 
-2.  Install dependencies:
-    ```bash
-    pnpm install
-    ```
+# 2. Install dependencies
+pnpm install
 
-3.  Start the development server:
-    ```bash
-    pnpm dev
-    ```
+# 3. Start the dev server
+pnpm dev
+```
 
-4.  Open your browser to `http://localhost:5173`.
+The app will be available at `http://localhost:5173`.
+
+## 🛠️ Tech Stack
+
+-   **Frontend**: React 19 + TypeScript
+-   **Build Tool**: Vite 8
+-   **Logic**: Custom browser-side image matching (NCC-based strip matching)
+-   **Style**: Modern, responsive Vanilla CSS
 
 ## 📂 Project Structure
 
--   `src/components/`: React UI components (DropZone, ResultViewer, etc.)
--   `src/stitcher/`: Core logic for image processing.
-    -   `stitcher.ts`: The main orchestration logic for ordering and compositing.
-    -   `overlapDetector.ts`: Implementation of the NCC strip-voting algorithm.
--   `src/index.css`: Global styles and design system tokens.
+-   `src/components/`: UI components like the DropZone and ResultViewer.
+-   `src/stitcher/`: The core stitching and overlap detection logic.
+-   `src/index.css`: Design tokens and global styles.
 
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
