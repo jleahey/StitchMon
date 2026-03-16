@@ -24,7 +24,6 @@ export function ResultViewer({ result, onReset, onAddMore }: ResultViewerProps) 
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'Stitched Image',
           });
           return;
         }
@@ -54,7 +53,7 @@ export function ResultViewer({ result, onReset, onAddMore }: ResultViewerProps) 
   };
 
   const fallbackCount = result.pairs.filter(p => p.fallback).length;
-  const overlapCount  = result.pairs.filter(p => !p.fallback).length;
+  const overlapCount = result.pairs.filter(p => !p.fallback).length;
 
   return (
     <div className="result-section" id="result-section">
